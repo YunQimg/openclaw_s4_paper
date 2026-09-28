@@ -1,0 +1,57 @@
+{
+  "strategy_version": "S4_R9_PAPER_V2",
+  "config_fingerprint": "d4785a79c5bae8e83036d856e3f9c6a66751f9e2ec21253aea5cafec8596cc77",
+  "replay_fingerprint": "3e7b986190a08cadea9d12fa4abab11edc2caad0f0623dcd8a31c28a692fbef0",
+  "mode": "historical_replay",
+  "mode_note": "以真实行情按每日决策 bar 逐日推进 as_of 的历史回放，非挂钟意义上的连续自然日；运行入口与线上一致（run_once）。",
+  "data": {
+    "market_path": "D:\\workspace\\quant-strategy-lab\\data\\paper_trading\\market\\4h.csv",
+    "daily_path": "D:\\workspace\\quant-strategy-lab\\data\\paper_trading\\market\\1d.csv",
+    "cash_path": "D:\\workspace\\quant-strategy-lab\\data\\paper_trading\\market\\cash_rate_dff.csv",
+    "n_bars": 19947,
+    "first_bar": "2017-08-17T04:00:00+00:00",
+    "last_bar": "2026-09-26T04:00:00+00:00"
+  },
+  "window": {
+    "start": "2026-06-29",
+    "end": "2026-09-26",
+    "n_days": 90
+  },
+  "statuses": {
+    "PAPER_FILLED": 21,
+    "NO_ACTION": 69
+  },
+  "ledger": {
+    "rows": 31,
+    "chain_ok": true
+  },
+  "emails": {
+    "attempted": 21,
+    "sent": 21,
+    "failed": 0,
+    "success_rate": 1.0
+  },
+  "anomalies": {
+    "n_records": 0,
+    "kinds": []
+  },
+  "network_attempts_blocked": 0,
+  "security_scan": {
+    "ok": true,
+    "n_files_scanned": 17
+  },
+  "acceptance": {
+    "days_at_least_90": true,
+    "days_continuous": true,
+    "no_ledger_break": true,
+    "no_real_exchange_calls": true,
+    "email_success_rate_ge_99": true
+  },
+  "acceptance_all_ok": true,
+  "deliverables": {
+    "daily_status": "D:\\workspace\\quant-strategy-lab\\openclaw_s4_paper\\reports\\m6\\m6_daily_status.csv",
+    "rebalance_emails": "D:\\workspace\\quant-strategy-lab\\openclaw_s4_paper\\reports\\m6\\m6_emails.csv",
+    "anomaly_records": "D:\\workspace\\quant-strategy-lab\\openclaw_s4_paper\\reports\\m6\\m6_anomalies.csv",
+    "run_summary": "D:\\workspace\\quant-strategy-lab\\openclaw_s4_paper\\reports\\m6\\m6_summary.json"
+  }
+}

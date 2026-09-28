@@ -1,0 +1,45 @@
+{
+  "strategy_id": "S4_R9_PAPER_V2",
+  "assets": ["BTC", "ETH", "SOL", "BNB"],
+  "reference_weights": {
+    "BTC": 0.25,
+    "ETH": 0.10,
+    "SOL": 0.30,
+    "BNB": 0.35
+  },
+  "modules": ["ma200", "tsmom6m"],
+  "ma_length": 200,
+  "tsmom_days": 126,
+  "tsmom_tanh_scale": 0.5,
+  "direction_component_weights": {"ma200": 0.35, "tsmom6m": 0.15},
+  "alloc_mode": "bucket",
+  "bucket_thresholds": [0.25, 0.50, 0.75],
+  "quality_layer": false,
+  "risk_layer": false,
+  "enforce_lower_band": true,
+  "signal_band": {
+    "BTC": [0.05, 0.25],
+    "ETH": [0.05, 0.15],
+    "SOL": [0.30, 0.40],
+    "BNB": [0.35, 0.45]
+  },
+  "audit_band": {
+    "BTC": [0.10, 0.30],
+    "ETH": [0.05, 0.20],
+    "SOL": [0.25, 0.40],
+    "BNB": [0.30, 0.45]
+  },
+  "rebalance_mode": "threshold",
+  "rebalance_threshold_absolute": 0.10,
+  "decision_cadence": "daily",
+  "listing_rule": "L1",
+  "fee": 0.001,
+  "slippage": 0.0002,
+  "cash_return": "Cash_Rate",
+  "decision_timeframe": "4H",
+  "execution_lag_bars": 1,
+  "min_notional_usd": 50.0,
+  "min_notional_equity_pct": 0.005,
+  "paper_only": true,
+  "exchange_trading_enabled": false
+}

@@ -1,0 +1,8 @@
+{
+  "enabled": true,
+  "recipient": "user@example.com",
+  "sender": "paper-system@example.com",
+  "timezone": "Asia/Shanghai",
+  "send_no_action": false,
+  "attach_csv": true
+}

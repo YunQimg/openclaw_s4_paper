@@ -1,0 +1,53 @@
+# OpenClaw 权限清单（Roadmap V2 §2.3）
+#
+# 原则：只授予纸面交易系统真正需要的读写与发信能力。
+# 任何交易所凭据、浏览器自动化、无关目录的 shell 访问一律不授予。
+
+version: 1
+permissions:
+  # ---- 允许（§2.3）----
+  workspace:
+    read_write:
+      - openclaw_s4_paper/config
+      - openclaw_s4_paper/state
+      - openclaw_s4_paper/logs
+  market_data:
+    read_write:
+      - data/paper_trading/market
+  email:
+    send: true
+    allowed_recipients:
+      - config://notification.json#recipient
+  network:
+    # 仅允许访问市场数据源，且必须经代理
+    allow_outbound:
+      - api.binance.com
+      - data-api.binance.vision
+      - fred.stlouisfed.org
+    require_proxy: true
+    proxy_env: PAPER_PROXY
+
+  # ---- 明确禁止（§2.1 / §2.3）----
+  denied:
+    - exchange_credentials
+    - exchange_account_read
+    - order_submission
+    - order_cancellation
+    - withdrawal
+    - transfer
+    - browser_automation
+    - cloud_wallet_access
+    - shell_access_outside_workspace
+
+secrets:
+  # 凭据只来自 OpenClaw Secret Store，绝不落盘到仓库或配置
+  providers: ["openclaw_secret_store", "environment"]
+  required:
+    - PAPER_SMTP_HOST
+    - PAPER_SMTP_PORT
+    - PAPER_SMTP_USER
+    - PAPER_SMTP_PASSWORD
+    - PAPER_SMTP_TLS
+  forbidden_in_repo: true
+  forbidden_in_logs: true
+  forbidden_in_email_body: true

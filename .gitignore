@@ -1,0 +1,15 @@
+# 运行时状态与日志不入库
+state/
+logs/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+
+# 凭据绝不入库（仅示例文件可提交）
+config/notification.json
+config/paper_account.json
+notification.json
+.env
