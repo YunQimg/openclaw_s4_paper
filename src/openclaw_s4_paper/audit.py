@@ -33,7 +33,7 @@ FORBIDDEN_IMPORTS: List[str] = [
 ]
 
 EXCHANGE_URL_PATTERN = re.compile(
-    r"https?://[^\s\"']*(api\.binance\.com|api\.okx\.com|api\.coinbase\.com)"
+    r"https?://[^\s\"']*(api\.binance\.(?:com|us)|api\.okx\.com|api\.coinbase\.com)"
     r"[^\s\"']*/(order|account|withdraw|trade)", re.I)
 
 

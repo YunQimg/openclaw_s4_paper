@@ -104,11 +104,48 @@ def test_resolve_proxies_uses_env_then_default(monkeypatch):
 
     monkeypatch.delenv("PAPER_DISABLE_NETWORK_FETCHES", raising=False)
     monkeypatch.setenv("PAPER_PROXY", "http://127.0.0.1:9999")
-    assert resolve_proxies()["https"] == "http://127.0.0.1:9999"
+    assert resolve_proxies(direct_check=lambda: False)["https"] == "http://127.0.0.1:9999"
     assert resolve_proxies("http://explicit:1")["https"] == "http://explicit:1"
 
     monkeypatch.delenv("PAPER_PROXY", raising=False)
-    assert resolve_proxies()["https"] == DEFAULT_PROXY
+    assert resolve_proxies(direct_check=lambda: False)["https"] == DEFAULT_PROXY
+
+
+def test_resolve_proxies_skips_proxy_when_google_reachable(monkeypatch):
+    """Google 可直连 -> 不使用代理（即使配置了 PAPER_PROXY）。"""
+    from openclaw_s4_paper.download_data import resolve_proxies
+
+    monkeypatch.delenv("PAPER_DISABLE_NETWORK_FETCHES", raising=False)
+    monkeypatch.setenv("PAPER_PROXY", "http://127.0.0.1:9999")
+    assert resolve_proxies(direct_check=lambda: True) == {}
+
+
+def test_resolve_proxies_explicit_beats_direct_detection(monkeypatch):
+    """显式代理优先于直连探测结果。"""
+    from openclaw_s4_paper.download_data import resolve_proxies
+
+    monkeypatch.delenv("PAPER_DISABLE_NETWORK_FETCHES", raising=False)
+    assert resolve_proxies(
+        "http://explicit:1", direct_check=lambda: True)["https"] == "http://explicit:1"
+
+
+def test_resolve_proxies_fails_when_no_direct_and_no_proxy(monkeypatch):
+    """无直连且无可用代理 -> 硬失败。"""
+    from openclaw_s4_paper.download_data import FetcherUnavailable, resolve_proxies
+
+    monkeypatch.delenv("PAPER_DISABLE_NETWORK_FETCHES", raising=False)
+    monkeypatch.setenv("PAPER_PROXY", "")
+    monkeypatch.setattr("openclaw_s4_paper.download_data.DEFAULT_PROXY", "")
+    with pytest.raises(FetcherUnavailable, match="no direct internet"):
+        resolve_proxies(direct_check=lambda: False)
+
+
+def test_kline_source_is_us_accessible():
+    """§13.1：行情源主源为 Binance.US，不含美国受限的 api.binance.com。"""
+    from openclaw_s4_paper.download_data import KLINE_URLS
+
+    assert KLINE_URLS[0].startswith("https://api.binance.us/")
+    assert all("api.binance.com" not in u for u in KLINE_URLS)
 
 
 def test_health_passes_with_fresh_data(tmp_path, monkeypatch, capsys):

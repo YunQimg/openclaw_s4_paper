@@ -6,7 +6,7 @@
   signal    每日信号检查（计算目标与调仓建议，执行纸面成交）
   settle    纸面收盘结算（按收盘价更新净值与回撤快照）
   health    健康检查（数据新鲜度、账本完整性、策略版本）
-  download  下载市场数据（**必须走代理**）
+  download  下载市场数据（直连不可达时走代理）
   replay    历史回放式 90 天纸面运行（§18 Milestone 6）
 """
 from __future__ import annotations
@@ -24,17 +24,17 @@ from .state_store import StateStore
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[3]
+    """仓库根。本包为 src-layout：`<repo>/src/openclaw_s4_paper/`，故 parents[2] 即仓库根。"""
+    return Path(__file__).resolve().parents[2]
 
 
 def _default_dirs() -> dict:
-    """默认目录：包根（openclaw_s4_paper/）下放 config 与 state（StateStore 会再
-    在其内部建 state/ 与 logs/ 子目录），市场数据放在仓库 data/ 下。"""
+    """默认目录：仓库根下放 config 与 state（StateStore 会再在其内部建 state/ 与
+    logs/ 子目录），市场数据放在仓库 data/ 下。"""
     root = _repo_root()
-    pkg = root / "openclaw_s4_paper"
     return {
-        "config": pkg / "config",
-        "workdir": pkg,
+        "config": root / "config",
+        "workdir": root,
         "market": root / "data" / "paper_trading" / "market",
     }
 
@@ -246,7 +246,7 @@ def cmd_health(args: argparse.Namespace) -> int:
 
 
 def cmd_download(args: argparse.Namespace) -> int:
-    """下载市场数据（**所有请求走代理**）。"""
+    """下载市场数据（直连可达则不用代理，否则走代理）。"""
     from .download_data import download_market_data, resolve_proxies, FetcherUnavailable
 
     d = _default_dirs()
@@ -256,7 +256,7 @@ def cmd_download(args: argparse.Namespace) -> int:
     except FetcherUnavailable as e:
         print(f"[FATAL] {e}", file=sys.stderr)
         return 2
-    print(f"proxy: {proxies['https']}")
+    print(f"proxy: {proxies.get('https') or 'direct (no proxy)'}")
     print(f"out  : {out}")
     try:
         paths = download_market_data(out, args.proxy, args.assets, args.start)
@@ -349,9 +349,10 @@ def build_parser() -> argparse.ArgumentParser:
     _common(p_h)
     p_h.set_defaults(func=cmd_health)
 
-    p_d = sub.add_parser("download", help="download market data (proxy required)")
+    p_d = sub.add_parser("download", help="download market data (auto proxy)")
     p_d.add_argument("--out-dir", default=None)
-    p_d.add_argument("--proxy", default=None, help=f"proxy URL (default {DEFAULT_PROXY})")
+    p_d.add_argument("--proxy", default=None,
+                     help=f"force this proxy (default: auto-detect; fallback {DEFAULT_PROXY})")
     p_d.add_argument("--assets", nargs="*", default=None)
     p_d.add_argument("--start", default="2017-01-01")
     p_d.set_defaults(func=cmd_download)

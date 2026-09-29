@@ -251,7 +251,7 @@ def test_compute_tsmom6m_matches_low_level():
 
 
 # --- 冻结口径一致性（Roadmap V2 §20 验收标准 1 / Milestone 2）----------------
-REPO = Path(__file__).resolve().parents[2]
+REPO = Path(__file__).resolve().parents[1]
 V3_DATA = REPO / "data" / "v3_spot"
 
 pytestmark_frozen = pytest.mark.skipif(

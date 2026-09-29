@@ -307,5 +307,5 @@ SMTP_ENV_VARS: List[str] = [
     "PAPER_SMTP_PASSWORD", "PAPER_SMTP_TLS",
 ]
 
-# 代理（所有下载操作必须走代理）
+# 代理：直连探测不可达时使用（--proxy > PAPER_PROXY > 此默认值）
 DEFAULT_PROXY = "http://127.0.0.1:7897"
