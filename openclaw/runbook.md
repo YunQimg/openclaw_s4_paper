@@ -16,7 +16,7 @@
 ## 2. 每日运行顺序
 
 ```text
-UTC 00:00  s4_r9_market_data_refresh   下载市场数据（走代理）
+UTC 00:00  s4_r9_market_data_refresh   下载市场数据（直连不可达时走代理）
 UTC 00:10  s4_r9_signal_check          计算信号 + 模拟成交 + 发调仓邮件
 UTC 00:20  s4_r9_paper_settlement      收盘结算，更新净值与回撤
 UTC 01:00  s4_r9_health_check          健康检查
@@ -31,7 +31,7 @@ UTC 01:00  s4_r9_health_check          健康检查
 [ ] 策略配置        config/strategy.json 存在且 reference_weights = R9
 [ ] 通知配置        config/notification.json 填写 recipient / sender
 [ ] SMTP 环境变量   在 Secret Store 中配置 5 个 PAPER_SMTP_* 变量
-[ ] 代理可用        PAPER_PROXY 指向可用代理（默认 http://127.0.0.1:7897）
+[ ] 代理可用        直连不通 Google 时 PAPER_PROXY 指向可用代理（默认 http://127.0.0.1:7897）
 [ ] 市场数据        data/paper_trading/market/{4h,1d,cash_rate_dff}.csv
 [ ] 账户初始化      python -m openclaw_s4_paper.cli init
 [ ] 试运行          python -m openclaw_s4_paper.cli signal --as-of <过去时刻>（不带 --send-mail）
@@ -46,7 +46,7 @@ UTC 01:00  s4_r9_health_check          健康检查
 现象：signal 任务状态 STALE_DATA，收到 [ALERT] 邮件，账本未提交
 处置：
   1. 检查 market_data_refresh 任务是否成功
-  2. 检查代理是否可用（下载必须走代理，无代理会硬失败）
+  2. 检查直连与代理（直连不通 Google 且无可用代理会硬失败）
   3. 手动补数：python -m openclaw_s4_paper.cli download --out-dir <市场数据目录>
   4. 数据恢复后重跑 signal
 ```

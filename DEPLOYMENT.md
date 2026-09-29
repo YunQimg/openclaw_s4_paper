@@ -25,7 +25,7 @@
 ```text
 Python >= 3.10
 运行时依赖：pandas / numpy / requests
-可用的 HTTP 代理（行情下载强制走代理；默认 http://127.0.0.1:7897）
+可用的 HTTP 代理（仅当直连不通 Google 时需要；默认 http://127.0.0.1:7897）
 可发信的 SMTP 账号（凭据仅存环境变量 / OpenClaw Secret Store）
 OpenClaw 运行时（用于调度 tasks.yaml）
 ```
@@ -53,7 +53,7 @@ export PAPER_SMTP_USER=paper-system@example.com
 export PAPER_SMTP_PASSWORD=********
 export PAPER_SMTP_TLS=true
 
-# 下载代理（所有下载必须走代理）
+# 下载代理（直连不通 Google 时使用）
 export PAPER_PROXY=http://127.0.0.1:7897
 ```
 
@@ -76,10 +76,9 @@ paper_account.json         账户 id / 币种 / 初始现金
 ## 5. 准备市场数据
 
 ```bash
-# 所有请求强制走代理；无代理会硬失败（不会静默直连）
+# 自动判定代理（直连可达 Google 则不用代理）；也可用 --proxy 强制指定
 python -m openclaw_s4_paper.cli download \
-  --out-dir data/paper_trading/market \
-  --proxy http://127.0.0.1:7897
+  --out-dir data/paper_trading/market
 ```
 
 产出：
@@ -139,7 +138,7 @@ python -m openclaw_s4_paper.cli health
 
 | UTC 时间 | 任务 | 作用 |
 | --- | --- | --- |
-| 00:00 | `s4_r9_market_data_refresh` | 下载 4H/1D/现金利率（走代理） |
+| 00:00 | `s4_r9_market_data_refresh` | 下载 4H/1D/现金利率（直连不可达时走代理） |
 | 00:10 | `s4_r9_signal_check` | 计算信号 + 模拟成交 + 发调仓邮件 |
 | 00:20 | `s4_r9_paper_settlement` | 收盘结算，更新净值与回撤 |
 | 01:00 | `s4_r9_health_check` | 健康检查 |
@@ -151,7 +150,8 @@ python -m openclaw_s4_paper.cli health
 ```text
 允许：workspace 读写（config / state / logs）+ 市场数据读写
       + 邮件发送（收件人受 config/notification.json 约束）
-      + 经代理的出网白名单（api.binance.com / data-api.binance.vision / fred.stlouisfed.org）
+      + 出网白名单（api.binance.us / data-api.binance.vision / fred.stlouisfed.org
+        / www.google.com 连通性探针）
 拒绝：交易所凭据 / 交易所账户读取 / 下单 / 撤单 / 提现 / 转账
       / 浏览器自动化 / 云钱包 / 无关目录的 shell 访问
 ```
@@ -210,7 +210,7 @@ logs/
 详见 `openclaw/runbook.md` §4 / §5。速查：
 
 ```text
-STALE_DATA         -> 检查 refresh 与代理，补数后重跑 signal
+STALE_DATA         -> 检查 refresh 与直连/代理，补数后重跑 signal
 INSUFFICIENT_DATA  -> 确认数据起点足够早（MA200≈34 天；TSMOM 6M≈126 交易日）
 INVARIANT_FAILED   -> 禁止手工编辑 ledger；用 snapshots.csv 末行重建账户
 DUPLICATE_RUN      -> 正常保护，无需处置

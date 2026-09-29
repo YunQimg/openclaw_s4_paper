@@ -45,17 +45,22 @@ data/paper_trading/market/
 
 ## 生成方式
 
-必须通过显式下载命令生成，网络请求**强制走代理**（§4 / §13.1）：
+必须通过显式下载命令生成（§4 / §13.1）。**代理按连通性自动判定**：先直连探测
+`www.google.com`，可直连则不走代理，否则必须走代理。
 
 ```powershell
 $env:PYTHONPATH = "src"
-python -B -m openclaw_s4_paper.cli download            # 使用默认代理 http://127.0.0.1:7897
-python -B -m openclaw_s4_paper.cli download --proxy http://127.0.0.1:7897
+python -B -m openclaw_s4_paper.cli download                                  # 自动判定
+python -B -m openclaw_s4_paper.cli download --proxy http://127.0.0.1:7897    # 强制指定
 ```
 
-- 代理来源优先级：`--proxy` 参数 > `PAPER_PROXY` 环境变量 > `DEFAULT_PROXY`（`http://127.0.0.1:7897`）。
-- 代理缺失或为空时抛 `FetcherUnavailable` 并**硬失败**，不允许静默直连。
+- 代理来源优先级（仅在不可直连时生效）：`--proxy` 参数 > `PAPER_PROXY` 环境变量
+  > `DEFAULT_PROXY`（`http://127.0.0.1:7897`）。
+- 不可直连且无可用代理时抛 `FetcherUnavailable` 并**硬失败**，不允许静默直连。
+- 显式传入空 `--proxy ""` 视为非法，直接硬失败。
 - 设置 `PAPER_DISABLE_NETWORK_FETCHES=1` 可在 CI / 离线环境禁用一切网络获取。
+- 行情源：Binance.US 为主（`api.binance.us`，美国境内可访问），备用
+  `data-api.binance.vision`；现金利率来自 FRED `fredgraph.csv?id=DFF`。
 
 ## 合成数据（测试用）
 

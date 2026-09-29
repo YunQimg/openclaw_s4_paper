@@ -41,7 +41,7 @@ export PAPER_SMTP_USER=paper-system@example.com
 export PAPER_SMTP_PASSWORD=********
 export PAPER_SMTP_TLS=true
 
-# 下载代理（**所有下载必须走代理**）
+# 下载代理（直连不通 Google 时使用）
 export PAPER_PROXY=http://127.0.0.1:7897
 ```
 
@@ -56,8 +56,8 @@ config/paper_account.json            账户 id / 币种 / 初始现金
 ## 3. 准备市场数据
 
 ```bash
-# 所有请求强制走代理；无代理会硬失败（不会静默直连）
-python -m openclaw_s4_paper.cli download --out-dir <市场数据目录> --proxy http://127.0.0.1:7897
+# 自动判定代理（直连可达 Google 则不用代理）；也可用 --proxy 强制指定
+python -m openclaw_s4_paper.cli download --out-dir <市场数据目录>
 ```
 
 输出：
@@ -217,6 +217,6 @@ state_store.py      账户/账本/运行清单/日志读写
 audit.py            敏感信息扫描 + 交易所能力静态扫描 + 运行清单
 email_notifier.py   邮件渲染（§8.3）+ 脱敏 + 发送
 run_once.py         主流程编排（幂等、失败策略、原子提交）
-download_data.py    市场数据下载（**强制代理**）
+download_data.py    市场数据下载（自动判定代理）
 cli.py              命令行入口（init/signal/settle/health/download）
 ```

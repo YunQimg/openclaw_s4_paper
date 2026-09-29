@@ -19,12 +19,13 @@ permissions:
     allowed_recipients:
       - config://notification.json#recipient
   network:
-    # 仅允许访问市场数据源，且必须经代理
+    # 仅允许访问市场数据源与连通性探针；直连可达时不用代理，否则须经代理
     allow_outbound:
-      - api.binance.com
+      - api.binance.us
       - data-api.binance.vision
       - fred.stlouisfed.org
-    require_proxy: true
+      - www.google.com
+    proxy_mode: auto
     proxy_env: PAPER_PROXY
 
   # ---- 明确禁止（§2.1 / §2.3）----
