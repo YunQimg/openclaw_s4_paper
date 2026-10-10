@@ -30,7 +30,7 @@
     "BNB": [0.30, 0.45]
   },
   "rebalance_mode": "threshold",
-  "rebalance_threshold_absolute": 0.10,
+  "rebalance_threshold_absolute": 0.20,
   "decision_cadence": "daily",
   "listing_rule": "L1",
   "fee": 0.001,

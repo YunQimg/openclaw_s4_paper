@@ -29,7 +29,7 @@ DEFAULT_SPECS: Dict[str, RebalanceSpec] = {
     "S1": RebalanceSpec("calendar", "Y"),
     "S2": RebalanceSpec("calendar_thresh", "Y", 0.10, "absolute"),
     "S3": RebalanceSpec("threshold", None, 0.10, "absolute"),
-    "S4": RebalanceSpec("threshold", None, 0.10, "absolute"),
+    "S4": RebalanceSpec("threshold", None, 0.20, "absolute"),
     "S5": RebalanceSpec("threshold", None, 0.10, "absolute"),
     "S6": RebalanceSpec("threshold", None, 0.10, "absolute"),
     "S7": RebalanceSpec("threshold", None, 0.10, "absolute"),
