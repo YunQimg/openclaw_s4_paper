@@ -173,7 +173,7 @@ def _held_account_matching(target: dict) -> PaperAccount:
 
 
 def test_scene_7_deviation_below_threshold_no_legs():
-    """场景 7：目标偏离 <10pp -> 不触发调仓（无腿，NO_ACTION）。"""
+    """场景 7：目标偏离 <20pp -> 不触发调仓（无腿，NO_ACTION）。"""
     cfg = StrategyConfig()
     acct = _held_account_matching(R9)
     plan = build_rebalance_plan(acct, R9, PRICES, PRICES, cfg,
@@ -183,10 +183,10 @@ def test_scene_7_deviation_below_threshold_no_legs():
 
 
 def test_scene_8_deviation_above_threshold_triggers():
-    """场景 8：目标偏离 >10pp -> 触发调仓（生成卖出腿）。"""
+    """场景 8：目标偏离 >20pp -> 触发调仓（生成卖出腿）。"""
     cfg = StrategyConfig()
     acct = _held_account_matching(R9)
-    target = {**R9, "BNB": 0.20}                      # 15pp 偏离
+    target = {**R9, "BNB": 0.10}                      # 25pp 偏离
     plan = build_rebalance_plan(acct, target, PRICES, PRICES, cfg,
                                 datetime(2026, 9, 15, tzinfo=UTC), first=False)
     assert plan.has_action

@@ -311,7 +311,7 @@ def test_s4_r9_matches_frozen_v5_bit_for_bit(tmp_path):
 
     tv5, spec = _frozen_v5_targets()
     assert spec.mode == "threshold", "S4 frozen spec must be pure threshold"
-    assert spec.threshold == pytest.approx(0.10)
+    assert spec.threshold == pytest.approx(0.20)
     assert spec.freq is None, "no calendar leg"
 
     common = tv5.index.intersection(mine_bars)

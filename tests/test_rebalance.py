@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """调仓触发与计划构造测试（Roadmap V2 §6.4 / §7 / §13.3 / §14.5 阈值场景）。
 
-覆盖：纯阈值触发（10pp 绝对口径）、最大绝对偏离、最小交易阈值、
+覆盖：纯阈值触发（20pp 绝对口径）、最大绝对偏离、最小交易阈值、
 以及低于阈值时记 NO_ACTION_THRESHOLD 而不生成订单。
 """
 from __future__ import annotations
@@ -42,14 +42,14 @@ def test_should_rebalance_below_threshold_false():
     cfg = StrategyConfig()
     cur = {"BTC": 0.25, "ETH": 0.10, "SOL": 0.30, "BNB": 0.35}
     tgt = {"BTC": 0.25, "ETH": 0.10, "SOL": 0.30, "BNB": 0.30}
-    assert not should_rebalance(cur, tgt, cfg), "5pp < 10pp threshold"
+    assert not should_rebalance(cur, tgt, cfg), "5pp < 20pp threshold"
 
 
 def test_should_rebalance_above_threshold_true():
     cfg = StrategyConfig()
     cur = {"BTC": 0.25, "ETH": 0.10, "SOL": 0.30, "BNB": 0.35}
-    tgt = {"BTC": 0.25, "ETH": 0.10, "SOL": 0.30, "BNB": 0.20}
-    assert should_rebalance(cur, tgt, cfg), "15pp > 10pp threshold"
+    tgt = {"BTC": 0.25, "ETH": 0.10, "SOL": 0.30, "BNB": 0.10}
+    assert should_rebalance(cur, tgt, cfg), "25pp > 20pp threshold"
 
 
 def test_deviation_is_max_absolute():
