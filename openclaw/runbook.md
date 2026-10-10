@@ -16,13 +16,19 @@
 ## 2. 每日运行顺序
 
 ```text
-UTC 00:00  s4_r9_market_data_refresh   下载市场数据（直连不可达时走代理）
-UTC 00:10  s4_r9_signal_check          计算信号 + 模拟成交 + 发调仓邮件
-UTC 00:20  s4_r9_paper_settlement      收盘结算，更新净值与回撤
-UTC 01:00  s4_r9_health_check          健康检查
+UTC 04:01  s4_r9_market_data_refresh   下载市场数据（直连不可达时走代理）
+UTC 04:15  s4_r9_signal_check          计算信号 + 模拟成交 + 发调仓邮件
+UTC 04:30  s4_r9_paper_settlement      收盘结算，更新净值与回撤
+UTC 05:00  s4_r9_health_check          健康检查
 ```
 
-顺序不可颠倒：结算必须在信号之后，否则净值快照会缺少当次成交。
+**为何不是 UTC 00:xx**：日频决策 bar = 当日首根 4H bar（00:00Z），要到 **04:00Z 才收盘**；
+而 `execution_lag_bars=1` 要求执行 bar（04:00Z，取其开盘价为执行价）已存在于面板。
+若在 00:xx 运行，`signal` 会因 `no execution bar available … exceeds panel end` 直接失败（exit 1）。
+
+顺序不可颠倒：refresh 必须先于 signal（否则面板缺当日 bar）；结算必须在信号之后，
+否则净值快照会缺少当次成交。`signal` 的 `--as-of` 固定为「当日 04:00:01Z」
+（决策 bar 收盘后 1 秒，无前视，与 M6 回放口径等效）。
 
 ## 3. 首次部署检查清单
 
@@ -82,6 +88,18 @@ UTC 01:00  s4_r9_health_check          健康检查
 现象：账本已提交，但 email.json 记录 sent=false
 处置：**只重试邮件，绝不重跑 signal**（重跑会被 DUPLICATE_RUN 拦下，
       但仍应从 email.json 取回内容手工补发或触发独立邮件重试任务）
+```
+
+### 4.6 EXECUTION_ERROR（无执行 bar）
+
+```text
+现象：signal 报 `no execution bar available: signal at <t> + 1 bars exceeds panel end`，exit 1
+原因：日频决策 bar（00:00Z）需在 04:00Z 收盘后才可用，执行 bar 取其后一根（04:00Z）。
+      若在 04:00Z 之前运行，或市场数据未刷新到当日，面板里没有该执行 bar。
+处置：
+  1. 确认 signal 排在 UTC 04:00 之后（见 §2），且 refresh 任务已完成
+  2. 手动补数后重跑：python -m openclaw_s4_paper.cli download --out-dir <市场数据目录>
+  3. 重跑 signal（--as-of 固定为当日 04:00:01Z）
 ```
 
 ## 5. 断点恢复（§17.2）

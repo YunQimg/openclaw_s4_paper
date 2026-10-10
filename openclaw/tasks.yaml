@@ -2,21 +2,34 @@
 #
 # 三个任务语义必须保留；具体 command 由部署方按实际 OpenClaw 环境调整。
 # 所有任务默认 --send-mail 关闭，需显式开启才会投递邮件。
+#
+# 调度口径（勿改回 UTC 00:xx）：
+#   日频决策 bar = 当日首根 4H bar（00:00Z），要到 04:00Z 才**收盘**；
+#   而 execution_lag_bars=1 要求执行 bar（04:00Z，取其开盘价作执行价）已存在于面板。
+#   因此数据刷新与信号任务都必须排在 04:00Z 之后，且顺序不可颠倒：
+#     refresh -> signal -> settle -> health
+#   否则 signal 会因「no execution bar available ... exceeds panel end」直接失败。
+#   signal 的 --as-of 固定为「当日 04:00:01Z」（决策 bar 收盘后 1 秒，与 M6 回放口径等效）。
+#
+# 状态目录统一用 `--state-dir .`：StateStore 会在该 root 下自建 state/ 与 logs/，
+#   传 `state` 会落成 state/state/（空隙 F 的双重嵌套），传 `.` 才与 §9 布局一致。
 
 version: 1
 tasks:
   - name: s4_r9_signal_check
     description: 每日信号检查：计算 S4 分档、目标权重与纸面调仓建议，并模拟成交
     schedule:
-      cron: "10 0 * * *"
+      # 04:15Z：晚于 refresh（04:01Z），确保 00:00Z 决策 bar 已收盘、04:00Z 执行 bar 已在面板
+      cron: "15 4 * * *"
       timezone: "UTC"
     command: >-
       python -m openclaw_s4_paper.cli signal
       --strategy-config config/strategy.json
       --notification-config config/notification.json
       --account-config config/paper_account.json
-      --state-dir state
+      --state-dir .
       --market-dir data/paper_trading/market
+      --as-of "$(date -u +%Y-%m-%d)T04:00:01+00:00"
       --send-mail
     working_directory: openclaw_s4_paper
     timeout_seconds: 900
@@ -28,13 +41,14 @@ tasks:
   - name: s4_r9_paper_settlement
     description: 纸面收盘结算：按收盘价更新未实现盈亏、净值与回撤
     schedule:
-      cron: "20 0 * * *"
+      # 04:30Z：必须在 signal 之后，否则净值快照缺少当次成交
+      cron: "30 4 * * *"
       timezone: "UTC"
     command: >-
       python -m openclaw_s4_paper.cli settle
       --strategy-config config/strategy.json
       --account-config config/paper_account.json
-      --state-dir state
+      --state-dir .
       --market-dir data/paper_trading/market
     working_directory: openclaw_s4_paper
     timeout_seconds: 600
@@ -45,22 +59,24 @@ tasks:
   - name: s4_r9_health_check
     description: 健康检查：数据新鲜度、账本完整性、邮件状态、策略版本
     schedule:
-      cron: "0 1 * * *"
+      cron: "0 5 * * *"
       timezone: "UTC"
     command: >-
       python -m openclaw_s4_paper.cli health
       --strategy-config config/strategy.json
-      --state-dir state
+      --state-dir .
       --market-dir data/paper_trading/market
     working_directory: openclaw_s4_paper
     timeout_seconds: 300
     on_failure: send_alert_email
 
-  # 市场数据更新（可选，独立于信号任务）。直连不可达时经 PAPER_PROXY 走代理。
+  # 市场数据更新（独立于信号任务，但必须早于 signal 完成）。直连不可达时经 PAPER_PROXY 走代理。
+  # 04:01Z：00:00Z 决策 bar 刚收盘，且下载器 end_ms=now 会带回正在形成的 04:00Z bar，
+  #   其开盘价即 signal 的执行价（开盘时即确定，无前视）。
   - name: s4_r9_market_data_refresh
     description: 下载 4H/1D/现金利率市场数据（直连可达则不用代理）
     schedule:
-      cron: "0 0 * * *"
+      cron: "1 4 * * *"
       timezone: "UTC"
     command: >-
       python -m openclaw_s4_paper.cli download
