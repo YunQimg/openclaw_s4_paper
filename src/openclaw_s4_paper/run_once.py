@@ -325,7 +325,7 @@ def run_once(*, market_path: Path, daily_path: Path, cash_path: Path, state_dir:
                 run_id=run_id, input_hash=input_hash, config_hash=config_hash,
                 assets=signals, listed_assets=listed, risky_total=risky_total,
                 cash_target_weight=cash_target, status=status)
-            _write_no_action_artifacts(store, snapshot, plan, val)
+            _write_no_action_artifacts(store, snapshot, plan, val, strategy_cfg)
             email_status = _maybe_notify(notifier, notification_cfg, snapshot, plan,
                                          None, status, store)
             if email_status.get("attempted") and not email_status.get("sent"):
@@ -511,7 +511,7 @@ def asdict_rebalance_leg(leg) -> dict:
 
 
 def _write_no_action_artifacts(store: StateStore, snapshot: SignalSnapshot, plan,
-                               val) -> None:
+                               val, strategy_cfg) -> None:
     payload = {
         "run_id": snapshot.run_id,
         "signal_time": snapshot.signal_time,
@@ -519,7 +519,7 @@ def _write_no_action_artifacts(store: StateStore, snapshot: SignalSnapshot, plan
         "reason": "NO_ACTION" if not plan.below_threshold else "NO_ACTION_THRESHOLD",
         "below_threshold": plan.below_threshold,
         "max_deviation": deviation(val.weights, snapshot.target_weights),
-        "threshold": 0.10,
+        "threshold": float(strategy_cfg.rebalance_threshold_absolute),
         "assets": {a: {"final_target_weight": s.final_target_weight,
                        "current_weight": val.weights.get(a, 0.0)}
                    for a, s in snapshot.assets.items()},

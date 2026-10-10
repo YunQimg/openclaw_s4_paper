@@ -3,7 +3,7 @@
 
 **只生成计划，不直接提交外部订单**（§13.3）。
 触发规则（S4 冻结口径）：
-  * 纯阈值：任一路径资产 |current_weight - target_weight| > 10pp（绝对口径）；
+  * 纯阈值：任一路径资产 |current_weight - target_weight| > 20pp（绝对口径）；
   * 无日历腿；
   * 必然触发：首次建仓、资产首次上市进入（L1）；
   * 最小交易阈值：|notional_delta| >= max(50 USD, equity × 0.5%)，
