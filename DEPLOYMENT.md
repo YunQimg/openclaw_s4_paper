@@ -69,7 +69,14 @@ notification.json          收件人 / 发件人（SMTP 密码不在此文件）
 paper_account.json         账户 id / 币种 / 初始现金
 ```
 
-可从同目录示例起步：`notification.example.json`、`paper_account.example.json`。
+仓库**只附带** `strategy.json`；`notification.json` 与 `paper_account.json` 需从同目录
+示例复制后填写（[tasks.yaml](openclaw/tasks.yaml) 直接引用这两个文件名，缺失会导致
+`signal` 任务以 `FileNotFoundError` 启动失败）：
+
+```bash
+cp config/notification.example.json config/notification.json
+cp config/paper_account.example.json config/paper_account.json
+```
 
 ---
 
@@ -138,12 +145,22 @@ python -m openclaw_s4_paper.cli health
 
 | UTC 时间 | 任务 | 作用 |
 | --- | --- | --- |
-| 00:00 | `s4_r9_market_data_refresh` | 下载 4H/1D/现金利率（直连不可达时走代理） |
-| 00:10 | `s4_r9_signal_check` | 计算信号 + 模拟成交 + 发调仓邮件 |
-| 00:20 | `s4_r9_paper_settlement` | 收盘结算，更新净值与回撤 |
-| 01:00 | `s4_r9_health_check` | 健康检查 |
+| 04:01 | `s4_r9_market_data_refresh` | 下载 4H/1D/现金利率（直连不可达时走代理） |
+| 04:15 | `s4_r9_signal_check` | 计算信号 + 模拟成交 + 发调仓邮件 |
+| 04:30 | `s4_r9_paper_settlement` | 收盘结算，更新净值与回撤 |
+| 05:00 | `s4_r9_health_check` | 健康检查 |
+
+**为什么不是 UTC 00:xx**：日频决策 bar = 当日首根 4H bar（00:00Z），要到 04:00Z 才收盘；
+`execution_lag_bars=1` 又要求执行 bar（04:00Z，取其开盘价作执行价）已在面板中。
+若在 00:xx 运行，`signal` 会以 `no execution bar available … exceeds panel end` 失败（exit 1）。
+故 refresh 与 signal 都必须排在 04:00Z 之后，顺序 refresh → signal → settle → health 不可颠倒。
+`signal` 的 `--as-of` 固定为「当日 04:00:01Z」（决策 bar 收盘后 1 秒，无前视）。
+
+状态目录统一用 `--state-dir .`：`StateStore` 会在该 root 下自建 `state/` 与 `logs/paper_trading/`；
+传 `--state-dir state` 会落成 `state/state/ledger.jsonl`（双重嵌套），与 §9 布局不符。
 
 任务已内置 `retry`（2–3 次 + 退避）与 `on_failure: send_alert_email`。
+若 refresh 失败未取到当日数据，signal 会因数据超过 12h 被判 `STALE_DATA` 而拒绝提交（fail fast）。
 
 权限按 `openclaw/permissions.yaml` 授予：
 
@@ -164,23 +181,31 @@ python -m openclaw_s4_paper.cli health
 
 ```text
 state/paper_account.json        当前账户（覆盖式）
+state/alert_state.json          连续异常计数与告警级别（覆盖式，§16）
 state/ledger.jsonl              成交事件账本（追加式，哈希链）
 state/orders.jsonl              调仓计划日志（追加式，哈希链）
 state/snapshots/snapshots.csv   逐日快照（追加式）
 state/runs/<run_id>.json        运行清单（幂等判定依据）
-logs/paper_trading/<date>.*.json   每日日志（§9）
+
+logs/paper_trading/<date>.signal.json   信号快照（每次 signal 都写）
+logs/paper_trading/<date>.run.json      结算 / 健康检查摘要
+logs/paper_trading/<date>.email.json    邮件投递记录（有尝试发信时）
+logs/paper_trading/<date>.alert.json    异常 / 告警留痕
+logs/paper_trading/<date>.error.log     失败错误栈（追加式）
 ```
 
 - 无调仓：**不发送邮件**，仅写入 `logs/paper_trading/<date>.signal.json`
-- 运行状态码：
+- 运行状态码（`config.STATUSES`）：
 
 ```text
 PAPER_FILLED       有纸面成交
 NO_ACTION          无调仓（目标未变或低于阈值）
 STALE_DATA         数据过期（最后完整 4H bar 距执行时间 > 12h）
-DUPLICATE_RUN      同一 (as_of, 策略版本, 输入哈希) 重复运行，正常保护
 INSUFFICIENT_DATA  MA200 < 200 根 bar 或 TSMOM 6M 日线不足 126 交易日
-INVARIANT_FAILED   账本哈希链断裂，拒绝提交
+INVARIANT_FAILED   账本哈希链断裂或成交后恒等式校验失败，拒绝提交
+DUPLICATE_RUN      同一 (as_of, 策略版本, 输入哈希) 重复运行，正常保护
+REBALANCE_PROPOSED 连续 3 次 CRITICAL 异常 -> 暂停纸面成交、只发告警（paused=true，exit 1）
+EXECUTION_ERROR    其他未预期异常（exit 1）
 ```
 
 邮件主题：
@@ -196,6 +221,7 @@ INVARIANT_FAILED   账本哈希链断裂，拒绝提交
 
 ```text
 state/paper_account.json
+state/alert_state.json
 state/ledger.jsonl
 state/orders.jsonl
 state/snapshots/snapshots.csv
@@ -224,8 +250,8 @@ DUPLICATE_RUN      -> 正常保护，无需处置
 
 ```bash
 cd openclaw_s4_paper
-python -m pytest tests -q                                  # 期望 127 passed
-python -B -m openclaw_s4_paper.cli replay --days 90        # M6 四项验收，exit 0
+python -m pytest tests -q                                  # 期望 131 passed
+python -B -m openclaw_s4_paper.cli replay --days 90        # M6 验收全部通过，exit 0
 ```
 
 `replay` 为历史回放式 90 天验证（真实行情按每日决策 bar 逐日推进 `as_of`，
@@ -238,7 +264,8 @@ m6_anomalies.csv      异常记录
 m6_summary.json/.md   运行总结
 ```
 
-验收四项：≥90 天连续运行、无账本断裂、无真实交易所调用、邮件成功率 ≥99%。
+`replay` 的全部验收项（`summary.acceptance` 共 5 个布尔，需全为真、exit 0）：
+≥90 天运行、日期逐日连续、无账本断裂、无真实交易所调用、邮件成功率 ≥99%。
 
 ---
 

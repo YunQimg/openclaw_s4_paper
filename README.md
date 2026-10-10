@@ -53,6 +53,9 @@ config/notification.json             邮件收件人/发件人（SMTP 密码不�
 config/paper_account.json            账户 id / 币种 / 初始现金
 ```
 
+仓库只附带 `config/strategy.json`；`notification.json` 与 `paper_account.json` 需从同目录
+`*.example.json` 复制后填写（`openclaw/tasks.yaml` 直接引用这两个文件名）。
+
 ## 3. 准备市场数据
 
 ```bash
@@ -104,6 +107,9 @@ python -m openclaw_s4_paper.cli settle
 
 # 健康检查
 python -m openclaw_s4_paper.cli health
+
+# Milestone 6 历史回放式 90 天验证（mock SMTP、不联网，产物写入 reports/m6/）
+python -B -m openclaw_s4_paper.cli replay --days 90
 ```
 
 ## 6. OpenClaw 调度配置
@@ -113,11 +119,15 @@ python -m openclaw_s4_paper.cli health
 `openclaw/runbook.md`（运维与故障处置）。
 
 ```text
-UTC 00:00  s4_r9_market_data_refresh
-UTC 00:10  s4_r9_signal_check
-UTC 00:20  s4_r9_paper_settlement
-UTC 01:00  s4_r9_health_check
+UTC 04:01  s4_r9_market_data_refresh
+UTC 04:15  s4_r9_signal_check
+UTC 04:30  s4_r9_paper_settlement
+UTC 05:00  s4_r9_health_check
 ```
+
+日频决策 bar = 当日首根 4H bar（00:00Z），04:00Z 才收盘；执行 bar（04:00Z）取其开盘价。
+故 refresh 与 signal 都必须排在 04:00Z 之后，否则 signal 会因缺执行 bar 直接失败。
+`signal` 的 `--as-of` 固定为「当日 04:00:01Z」，状态目录用 `--state-dir .`（落盘 `state/`、`logs/`）。
 
 ## 7. 邮件示例
 
@@ -174,6 +184,7 @@ MaxDD to date：-0.11%
 
 ```text
 state/paper_account.json
+state/alert_state.json
 state/ledger.jsonl
 state/orders.jsonl
 state/snapshots/snapshots.csv
@@ -217,6 +228,7 @@ state_store.py      账户/账本/运行清单/日志读写
 audit.py            敏感信息扫描 + 交易所能力静态扫描 + 运行清单
 email_notifier.py   邮件渲染（§8.3）+ 脱敏 + 发送
 run_once.py         主流程编排（幂等、失败策略、原子提交）
+paper_replay.py     Milestone 6 历史回放式 90 天纸面验证（mock SMTP、出网守卫）
 download_data.py    市场数据下载（自动判定代理）
-cli.py              命令行入口（init/signal/settle/health/download）
+cli.py              命令行入口（init/signal/settle/health/download/replay）
 ```
